@@ -38,12 +38,6 @@ local function getNumber(section, key, fallback)
   return n
 end
 
-local function getBool(section, key, fallback)
-  if not ensureIni() then return fallback end
-  local v = tonumber(state.ini:get(section, key, fallback and 1 or 0))
-  return v == 1
-end
-
 local function setValue(section, key, value)
   if not ensureIni() then return end
   state.ini:setAndSave(section, key, value)
@@ -77,25 +71,12 @@ function script.windowMain(dt)
 
   ui.text('Neck FX Tweaks')
   ui.separator()
+  ui.textWrapped('If Neck FX is not enabled, these settings will not do anything.')
+  ui.separator()
   ui.textWrapped(state.status)
 
   if not state.loaded then
     if ui.button('Retry loading') then
-      loadIni()
-    end
-    ui.popFont()
-    return
-  end
-
-  local enabled = getBool('BASIC', 'ENABLED', true)
-
-  ui.separator()
-  ui.text('Neck FX status: ' .. (enabled and 'Enabled' or 'Disabled'))
-  ui.separator()
-
-  if not enabled then
-    ui.textWrapped('First, enable Neck FX.')
-    if ui.button('Reload from file') then
       loadIni()
     end
     ui.popFont()
