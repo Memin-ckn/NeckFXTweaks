@@ -3,7 +3,15 @@ local NECK_INI_PATH = ac.getFolder(ac.FolderID.Root) .. '/extension/config/neck.
 local state = {
   ini = nil,
   loaded = false,
-  status = 'Starting...'
+  status = 'Starting...',
+  activeTab = 'basic',
+  sections = {
+    basic_direction = true,
+    basic_look = true,
+    advanced_direction = false,
+    advanced_pan = false,
+    advanced_effects = false
+  }
 }
 
 local function log(msg)
@@ -249,9 +257,91 @@ local function drawStickSelector(current)
   return current
 end
 
+local function drawTabButton(id, label)
+  if ui.button(label) then
+    state.activeTab = id
+  end
+end
+
+local function drawSectionToggle(id, title)
+  local opened = state.sections[id]
+  local prefix = opened and '🔽 ' or '▶️ '
+  if ui.button(prefix .. title) then
+    state.sections[id] = not opened
+  end
+  return state.sections[id]
+end
+
+local function drawBasicTab()
+  if drawSectionToggle('basic_direction', 'Direction alignment') then
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_STEERING', 'Steering following', 0.0, 2.5, 0.25, '%.2f', 2)
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY', 'Track following', 0.0, 2.5, 0.25, '%.2f', 2)
+    drawSlider('ALIGNMENT_BASE', 'TILT', 'Base head tilt', -10.0, 10.0, 0.0, '%.1f°', 1)
+    drawSlider('ALIGNMENT_BASE', 'YAW', 'Base head yaw', -10.0, 10.0, 0.0, '%.1f°', 1)
+    ui.separator()
+  end
+
+  if drawSectionToggle('basic_look', 'Look around') then
+    local xboxStick = getNumber('LOOK', 'XBOX_STICK', 1)
+    drawStickSelector(xboxStick)
+    drawSlider('LOOK', 'XBOX_STICK_DEADZONE', 'Xbox stick deadzone', 0.01, 0.99, 0.03, '%.2f', 2)
+    drawSlider('LOOK', 'XBOX_STICK_EXPONENT', 'Xbox stick exponent', 0.2, 5.0, 1.8, '%.2f', 2)
+    drawSlider('LOOK', 'FILTER_SPEED', 'Glance filtering speed', 1.0, 30.0, 10.0, '%.0f', 0)
+    drawSlider('LOOK', 'TOP_SPEED', 'Top glance speed', 100.0, 800.0, 400.0, '%.0f deg/s', 0)
+    ui.separator()
+  end
+end
+
+local function drawAdvancedTab()
+  if drawSectionToggle('advanced_direction', 'Direction alignment') then
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_STEERING', 'Steering following', 0.0, 2.5, 0.25, '%.2f', 2)
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_STEERING_FILTER_SPEED', 'Steering following filter', 0.0, 15.0, 6.0, '%.1f', 1)
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY', 'Track following', 0.0, 2.5, 0.25, '%.2f', 2)
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY_FULL_SPEED', 'Track following full speed', 0.0, 80.0, 40.0, '%.0f km/h', 0)
+    drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY_FILTER_SPEED', 'Track following filter', 0.0, 15.0, 5.0, '%.1f', 1)
+    drawSlider('ALIGNMENT_BASE', 'VERTICAL_AXIS_SPEED', 'Vertical axis speed', 0.0, 15.0, 5.0, '%.1f', 1)
+    drawSlider('ALIGNMENT_BASE', 'TILT', 'Base head tilt', -10.0, 10.0, 0.0, '%.1f°', 1)
+    drawSlider('ALIGNMENT_BASE', 'YAW', 'Base head yaw', -10.0, 10.0, 0.0, '%.1f°', 1)
+    drawSlider('ALIGNMENT_BASE', 'HORIZON_LOCK', 'Horizon lock', 0.0, 1.0, 0.3, '%.2f', 2)
+    drawCheckbox('ALIGNMENT_BASE', 'HORIZON_LOCK_TRACK', 'Lock horizon to track surface', false)
+    drawSlider('ALIGNMENT_BASE', 'G_TILT_X', 'Tilt with X G-force', 0.0, 2.0, 0.2, '%.2f', 2)
+    drawSlider('ALIGNMENT_BASE', 'G_TILT_Z', 'Tilt with Z G-force', 0.0, 2.0, 1.0, '%.2f', 2)
+    ui.separator()
+  end
+
+  if drawSectionToggle('advanced_pan', 'Look and pan') then
+    local xboxStick = getNumber('LOOK', 'XBOX_STICK', 1)
+    drawStickSelector(xboxStick)
+    drawSlider('LOOK', 'FILTER_SPEED', 'Glance filtering speed', 1.0, 30.0, 10.0, '%.0f', 0)
+    drawSlider('LOOK', 'TOP_SPEED', 'Top glance speed', 100.0, 800.0, 400.0, '%.0f deg/s', 0)
+    drawSlider('LOOK', 'FILTER_MANUAL_SPEED', 'Free look filtering speed', 1.0, 30.0, 20.0, '%.0f', 0)
+    drawPairSliders('LOOK', 'MOUSE_SENSITIVITY', 'Mouse sensitivity X', 'Mouse sensitivity Y', 1.0, 1000.0, 400.0, 200.0, '%.0f', 0)
+    drawSlider('LOOK', 'XBOX_STICK_DEADZONE', 'Xbox stick deadzone', 0.01, 0.99, 0.03, '%.2f', 2)
+    drawSlider('LOOK', 'XBOX_STICK_EXPONENT', 'Xbox stick exponent', 0.2, 5.0, 1.8, '%.2f', 2)
+    drawCheckbox('LOOK', 'ORIGINAL_LOOK_BACK', 'Hide car when looking back')
+    drawSlider('LOOK', 'LOOK_BACK_ANGLE', 'Angle for looking back', 60.0, 150.0, 130.0, '%.0f°', 0)
+    drawCheckbox('LOOK', 'LOOK_WITH_RHM', 'Look and pan with Track IR connected')
+
+    ui.separator()
+
+    drawSlider('PAN', 'FILTER_SPEED', 'Pan filtering speed', 1.0, 30.0, 6.0, '%.0f', 0)
+    drawSlider('PAN', 'TOP_SPEED', 'Pan top speed', 1.0, 200.0, 20.0, '%.0f deg/s', 0)
+    drawSlider('PAN', 'FILTER_MANUAL_SPEED', 'Free movement filtering speed', 1.0, 30.0, 2.0, '%.0f', 0)
+    drawPairSliders('PAN', 'MOUSE_SENSITIVITY', 'Pan mouse sensitivity X', 'Pan mouse sensitivity Y', 0.0, 20.0, 1.0, 1.0, '%.1f', 1)
+    ui.separator()
+  end
+
+  if drawSectionToggle('advanced_effects', 'Effects and helmet') then
+    drawCheckbox('EFFECTS_BASE', 'LENS_FLARE', 'Lens flare')
+    drawCheckbox('HELMET', 'SHOW', 'Show driver helmet')
+    drawCheckbox('HELMET', 'BLUR', 'Blur helmet')
+    ui.separator()
+  end
+end
+
 function script.windowMain(dt)
   ui.pushFont(ui.Font.Small)
-  ui.pushItemWidth(ui.availableSpaceX() - 20)
+  ui.pushItemWidth(ui.availableSpaceX() - ui.availableSpaceX()/4)
 
   if not state.loaded then
     loadIni()
@@ -271,49 +361,19 @@ function script.windowMain(dt)
     return
   end
 
-  ui.offsetCursorY(6)
-  ui.header('Direction alignment')
-  drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_STEERING', 'Steering following', 0.0, 2.5, 0.25, '%.2f', 2)
-  drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_STEERING_FILTER_SPEED', 'Steering following filter', 0.0, 15.0, 6.0, '%.1f', 1)
-  drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY', 'Track following', 0.0, 2.5, 0.25, '%.2f', 2)
-  drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY_FULL_SPEED', 'Track following full speed', 0.0, 80.0, 40.0, '%.0f km/h', 0)
-  drawSlider('ALIGNMENT_BASE', 'ALIGN_WITH_VELOCITY_FILTER_SPEED', 'Track following filter', 0.0, 15.0, 5.0, '%.1f', 1)
-  drawSlider('ALIGNMENT_BASE', 'VERTICAL_AXIS_SPEED', 'Vertical axis speed', 0.0, 15.0, 5.0, '%.1f', 1)
-  drawSlider('ALIGNMENT_BASE', 'TILT', 'Base head tilt', -10.0, 10.0, 0.0, '%.1f°', 1)
-  drawSlider('ALIGNMENT_BASE', 'YAW', 'Base head yaw', -10.0, 10.0, 0.0, '%.1f°', 1)
-  drawSlider('ALIGNMENT_BASE', 'HORIZON_LOCK', 'Horizon lock', 0.0, 1.0, 0.3, '%.2f', 2)
-  drawCheckbox('ALIGNMENT_BASE', 'HORIZON_LOCK_TRACK', 'Lock horizon to track surface', false)
-  drawSlider('ALIGNMENT_BASE', 'G_TILT_X', 'Tilt with X G-force', 0.0, 2.0, 0.2, '%.2f', 2)
-  drawSlider('ALIGNMENT_BASE', 'G_TILT_Z', 'Tilt with Z G-force', 0.0, 2.0, 1.0, '%.2f', 2)
+  ui.separator()
 
-  ui.offsetCursorY(6)
-  ui.header('Look around')
-  local xboxStick = getNumber('LOOK', 'XBOX_STICK', 1)
-  drawStickSelector(xboxStick)
-  drawSlider('LOOK', 'FILTER_SPEED', 'Glance filtering speed', 1.0, 30.0, 10.0, '%.0f', 0)
-  drawSlider('LOOK', 'TOP_SPEED', 'Top glance speed', 100.0, 800.0, 400.0, '%.0f deg/s', 0)
-  drawSlider('LOOK', 'FILTER_MANUAL_SPEED', 'Free look filtering speed', 1.0, 30.0, 20.0, '%.0f', 0)
-  drawPairSliders('LOOK', 'MOUSE_SENSITIVITY', 'Mouse sensitivity X', 'Mouse sensitivity Y', 1.0, 1000.0, 400.0, 200.0, '%.0f', 0)
-  drawSlider('LOOK', 'XBOX_STICK_DEADZONE', 'Xbox stick deadzone', 0.01, 0.99, 0.03, '%.2f', 2)
-  drawSlider('LOOK', 'XBOX_STICK_EXPONENT', 'Xbox stick exponent', 0.2, 5.0, 1.8, '%.2f', 2)
-  drawCheckbox('LOOK', 'ORIGINAL_LOOK_BACK', 'Hide car when looking back')
-  drawSlider('LOOK', 'LOOK_BACK_ANGLE', 'Angle for looking back', 60.0, 150.0, 130.0, '%.0f°', 0)
-  drawCheckbox('LOOK', 'LOOK_WITH_RHM', 'Look and pan with Track IR connected')
+  drawTabButton('basic', 'Basic')
+  ui.sameLine()
+  drawTabButton('advanced', 'Advanced')
+  ui.separator()
 
-  ui.offsetCursorY(6)
-  ui.header('Pan around')
-  drawSlider('PAN', 'FILTER_SPEED', 'Filtering speed', 1.0, 30.0, 6.0, '%.0f', 0)
-  drawSlider('PAN', 'TOP_SPEED', 'Top speed', 100.0, 800.0, 20.0, '%.0f deg/s', 0)
-  drawSlider('PAN', 'FILTER_MANUAL_SPEED', 'Free movement filtering speed', 1.0, 30.0, 20.0, '%.0f', 0)
-  drawPairSliders('PAN', 'MOUSE_SENSITIVITY', 'Pan mouse sensitivity X', 'Pan mouse sensitivity Y', 0.0, 20.0, 1.0, 1.0, '%.1f', 1)
+  if state.activeTab == 'basic' then
+    drawBasicTab()
+  else
+    drawAdvancedTab()
+  end
 
-  ui.offsetCursorY(6)
-  ui.header('Effects')
-  drawCheckbox('EFFECTS_BASE', 'LENS_FLARE', 'Lens flare')
-  drawCheckbox('HELMET', 'SHOW', 'Show driver helmet')
-  drawCheckbox('HELMET', 'BLUR', 'Blur helmet')
-
-  ui.offsetCursorY(8)
   if ui.button('Reload from file') then
     loadIni()
   end
